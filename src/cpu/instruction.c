@@ -293,13 +293,13 @@ void RTI(cpu_t *cpu, u16 addr)
     cpu->SP++;
     u8 value = read_memory(cpu, (0x100 | cpu->SP));
 
-    cpu->C = value & 0x01;
-    cpu->Z = value & 0x02;
-    cpu->I = value & 0x04;
-    cpu->D = value & 0x08;
-    cpu->B = value & 0x10;
-    cpu->V = value & 0x40;
-    cpu->N = value & 0x80;
+    cpu->C =  value & 0x01;
+    cpu->Z = (value >> 1) & 1;
+    cpu->I = (value >> 2) & 1;
+    cpu->D = (value >> 3) & 1;
+    cpu->B = (value >> 4) & 1;
+    cpu->V = (value >> 6) & 1;
+    cpu->N = (value >> 7) & 1;
 
     // Low Byte of Return Address
     cpu->SP++;
