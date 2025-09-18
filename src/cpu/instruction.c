@@ -71,7 +71,7 @@ u16 indy_address(cpu_t *cpu) {
 }
 
 u16 imp_address(cpu_t *cpu) {
-    return cpu->PC;
+    return 0;
 }
 
 i8 rel_address(cpu_t *cpu) {
@@ -206,13 +206,13 @@ void PLP(cpu_t *cpu, u16 addr)
     cpu->SP++;
     u8 value = read_memory(cpu, (0x100 | cpu->SP));
 
-    cpu->C = (value >> 1) & 1;
-    cpu->Z = (value >> 2) & 1;
-    cpu->I = (value >> 3) & 1;
-    cpu->D = (value >> 4) & 1;
-    cpu->B = (value >> 5) & 1;
-    cpu->V = (value >> 6) & 1;
-    cpu->N = (value >> 7) & 1;
+    cpu->C = (value & CARRY_FLAG) ? 1 : 0;
+    cpu->Z = (value & ZERO_FLAG) ? 1 : 0;
+    cpu->I = (value & INTERRUPT_FLAG) ? 1 : 0;
+    cpu->D = (value & DECIMAL_FLAG) ? 1 : 0;
+    cpu->B = (value & BREAK_FLAG) ? 1 : 0;
+    cpu->V = (value & OVERFLOW_FLAG) ? 1 : 0;
+    cpu->N = (value & NEGATIVE_FLAG) ? 1 : 0;
 }
 
 void BCC(cpu_t *cpu, u16 addr)
@@ -293,13 +293,13 @@ void RTI(cpu_t *cpu, u16 addr)
     cpu->SP++;
     u8 value = read_memory(cpu, (0x100 | cpu->SP));
 
-    cpu->C =  value & 0x01;
-    cpu->Z = (value >> 1) & 1;
-    cpu->I = (value >> 2) & 1;
-    cpu->D = (value >> 3) & 1;
-    cpu->B = (value >> 4) & 1;
-    cpu->V = (value >> 6) & 1;
-    cpu->N = (value >> 7) & 1;
+    cpu->C = (value & CARRY_FLAG) ? 1 : 0;
+    cpu->Z = (value & ZERO_FLAG) ? 1 : 0;
+    cpu->I = (value & INTERRUPT_FLAG) ? 1 : 0;
+    cpu->D = (value & DECIMAL_FLAG) ? 1 : 0;
+    cpu->B = (value & BREAK_FLAG) ? 1 : 0;
+    cpu->V = (value & OVERFLOW_FLAG) ? 1 : 0;
+    cpu->N = (value & NEGATIVE_FLAG) ? 1 : 0;
 
     // Low Byte of Return Address
     cpu->SP++;
@@ -441,7 +441,7 @@ void CMP(cpu_t *cpu, u16 addr)
     u16 result = (u16)cpu->A - (u16)value;
     cpu->C = (cpu->A >= value);
     cpu->Z = (cpu->A == value);
-    cpu->N = (result & 0x80);
+    cpu->N = ((result & NEGATIVE_FLAG) != 0) ? 1 : 0;
 }
 
 void CPX(cpu_t *cpu, u16 addr)
@@ -450,7 +450,7 @@ void CPX(cpu_t *cpu, u16 addr)
     u16 result = (u16)cpu->X - (u16)value;
     cpu->C = (cpu->X >= value);
     cpu->Z = (cpu->X == value);
-    cpu->N = (result & 0x80);
+    cpu->N = ((result & NEGATIVE_FLAG) != 0) ? 1 : 0;
 }
 
 void CPY(cpu_t *cpu, u16 addr)
@@ -459,7 +459,7 @@ void CPY(cpu_t *cpu, u16 addr)
     u16 result = (u16)cpu->Y - (u16)value;
     cpu->C = (cpu->Y >= value);
     cpu->Z = (cpu->Y == value);
-    cpu->N = (result & 0x80);
+    cpu->N = ((result & NEGATIVE_FLAG) != 0) ? 1 : 0;
 }
 
 void ASL(cpu_t *cpu, u16 addr)
@@ -481,40 +481,62 @@ void ASL(cpu_t *cpu, u16 addr)
 
 void LSR(cpu_t *cpu, u16 addr)
 {
-    u8 value = read_memory(cpu, addr);
-
-    cpu->C = (value & 0x01) != 0;  // bit 0 -> Carry
-    value >>= 1;                   // shift right
-    Z_flag(cpu, value);            // update Zero flag
-    N_flag(cpu, value);            // Negative flag always 0 after LSR
-
-    write_memory(cpu, addr, value);
+    if (addr == 0) { // accumulator mode
+        cpu->C = (cpu->A & 0x01) ? 1 : 0;
+        cpu->A >>= 1;
+        Z_flag(cpu, cpu->A);
+        N_flag(cpu, cpu->A); 
+    } else {
+        u8 value = read_memory(cpu, addr);
+        cpu->C = (value & 0x01) ? 1 : 0;
+        value >>= 1;
+        Z_flag(cpu, value);
+        N_flag(cpu, value);
+        write_memory(cpu, addr, value);
+    }
 }
 
 void ROL(cpu_t *cpu, u16 addr)
 {
-    u8 value = read_memory(cpu, addr);
     u8 old_c = cpu->C;
 
-    cpu->C = (value & 0x80) != 0;       // bit 7 -> Carry
-    value = (value << 1) | old_c;       // shift left, insert old carry
-    Z_flag(cpu, value);                  // update Zero flag
-    N_flag(cpu, value);                  // update Negative flag
+    if (addr == 0) {
+        cpu->C = (cpu->A & 0x80) ? 1 : 0;
+        cpu->A = (cpu->A << 1) | old_c;
+        Z_flag(cpu, cpu->A);                  
+        N_flag(cpu, cpu->A); 
+    } else {
+        u8 value = read_memory(cpu, addr);
+        cpu->C = (value & 0x80) != 0;       // bit 7 -> Carry
+        value = (value << 1) | old_c;       // shift left, insert old carry
 
-    write_memory(cpu, addr, value);
+        Z_flag(cpu, value);                  // update Zero flag
+        N_flag(cpu, value);                  // update Negative flag
+
+        write_memory(cpu, addr, value);
+    }
 }
 
 void ROR(cpu_t *cpu, u16 addr)
 {
-    u8 value = read_memory(cpu, addr);
     u8 old_c = cpu->C;
 
-    cpu->C = (value & 0x01) != 0;       // bit 0 -> Carry
-    value = (value >> 1) | (old_c << 7);// shift right, insert old carry
-    Z_flag(cpu, value);                  // update Zero flag
-    N_flag(cpu, value);                  // update Negative flag
+    if (addr == 0) {
+        cpu->C = (cpu->A & CARRY_FLAG) != 0;       // bit 0 -> Carry
+        cpu->A = (cpu->A >> 1) | (old_c << 7);     // shift right, insert old carry
 
-    write_memory(cpu, addr, value);
+        Z_flag(cpu, cpu->A);                       // update Zero flag
+        N_flag(cpu, cpu->A);                       // update Negative flag
+    } else {
+        u8 value = read_memory(cpu, addr);
+        cpu->C = (value & CARRY_FLAG) != 0;       // bit 0 -> Carry
+        value = (value >> 1) | (old_c << 7);// shift right, insert old carry
+
+        Z_flag(cpu, value);                  // update Zero flag
+        N_flag(cpu, value);                  // update Negative flag
+
+        write_memory(cpu, addr, value);
+    }
 }
 
 void SEC(cpu_t *cpu, u16 addr)
@@ -554,18 +576,20 @@ void CLV(cpu_t *cpu, u16 addr)
 
 void BIT(cpu_t *cpu, u16 addr)
 {
-    u8 value = cpu->A & read_memory(cpu, addr);
+    u8 value = read_memory(cpu, addr);
+    u8 result = cpu->A & value;
 
-    cpu->Z = ((cpu->A & value) == 0);
-    cpu->N = (value >> 7) & 1;
-    cpu->V = (value >> 6) & 1;
+    cpu->Z = (result == 0);
+    cpu->N = (value & NEGATIVE_FLAG) ? 1 : 0;
+    cpu->V = (value & OVERFLOW_FLAG) ? 1 : 0;
 }
 
 void BRK(cpu_t *cpu, u16 addr)
 {
-    cpu->PC += 1;
+    cpu->PC++;
 
-    u16 return_addr = cpu->PC + 1;
+    u16 return_addr = cpu->PC;
+
     write_memory(cpu, 0x100 | cpu->SP, (return_addr >> 8) & 0xFF); 
     cpu->SP--;
 
