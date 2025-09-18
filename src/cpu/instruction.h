@@ -29,7 +29,7 @@ typedef struct opcode_t
 
 extern opcode_t opcodes[256];
 
-u8 imm_address(cpu_t *cpu);
+u16 imm_address(cpu_t *cpu);
 u16 zp_address(cpu_t *cpu);
 u16 zpx_address(cpu_t *cpu);
 u16 zpy_address(cpu_t *cpu);

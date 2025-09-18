@@ -98,6 +98,15 @@ u8 load_program(cpu_t *cpu, const char* rom_path, u16 load_addr)
     // Nothing Loaded
     if (bytes_read == 0) return status;
 
+    write_memory(cpu, INTERRUPT_HANDLER, 0x00);
+    write_memory(cpu, INTERRUPT_HANDLER + 1, 0x0F);
+
+    write_memory(cpu, RESET_LOW, 0x00);
+    write_memory(cpu, RESET_HIGH, 0xFF);
+
+    write_memory(cpu, BRK_HANDLER, 0x00);
+    write_memory(cpu, BRK_HANDLER + 1, 0x00);
+
     cpu->PC = load_addr;
 
     status = 0;

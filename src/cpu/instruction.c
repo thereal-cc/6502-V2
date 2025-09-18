@@ -1,6 +1,6 @@
 #include "instruction.h"
 
-u8 imm_address(cpu_t *cpu) {
+u16 imm_address(cpu_t *cpu) {
     return cpu->PC++;
 }
 
@@ -586,8 +586,7 @@ void BRK(cpu_t *cpu, u16 addr)
     cpu->SP--;
 
     cpu->I = 1;
-    cpu->running = false;
-    // cpu->PC = (read_memory(cpu, BRK_HANDLER)) | (read_memory(cpu, BRK_HANDLER+1) << 8);
+    cpu->PC = (read_memory(cpu, BRK_HANDLER)) | (read_memory(cpu, BRK_HANDLER+1) << 8);
 }
 
 void NOP(cpu_t *cpu, u16 addr)
