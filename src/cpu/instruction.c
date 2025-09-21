@@ -210,49 +210,48 @@ void PLP(cpu_t *cpu, u16 addr)
     cpu->Z = (value & ZERO_FLAG) ? 1 : 0;
     cpu->I = (value & INTERRUPT_FLAG) ? 1 : 0;
     cpu->D = (value & DECIMAL_FLAG) ? 1 : 0;
-    cpu->B = (value & BREAK_FLAG) ? 1 : 0;
     cpu->V = (value & OVERFLOW_FLAG) ? 1 : 0;
     cpu->N = (value & NEGATIVE_FLAG) ? 1 : 0;
 }
 
 void BCC(cpu_t *cpu, u16 addr)
 {
-    if (!cpu->C) cpu->PC += (i8)addr;
+    if (cpu->C == 0) cpu->PC += (i8)addr;
 }
 
 void BCS(cpu_t *cpu, u16 addr)
 {
-    if (cpu->C) cpu->PC += (i8)addr;
+    if (cpu->C == 1) cpu->PC += (i8)addr;
 }
 
 void BEQ(cpu_t *cpu, u16 addr)
 {
-    if (cpu->Z) cpu->PC += (i8)addr;
+    if (cpu->Z == 1) cpu->PC += (i8)addr;
 }
 
 void BNE(cpu_t *cpu, u16 addr)
 {
-    if (!cpu->Z) cpu->PC += (i8)addr;
+    if (cpu->Z == 0) cpu->PC += (i8)addr;
 }
 
 void BMI(cpu_t *cpu, u16 addr)
 {
-    if (cpu->N) cpu->PC += (i8)addr;
+    if (cpu->N == 1) cpu->PC += (i8)addr;
 }
 
 void BPL(cpu_t *cpu, u16 addr)
 {
-    if (!cpu->N) cpu->PC += (i8)addr;
+    if (cpu->N == 0) cpu->PC += (i8)addr;
 }
 
 void BVC(cpu_t *cpu, u16 addr)
 {
-    if (!cpu->V) cpu->PC += (i8)addr;
+    if (cpu->V == 0) cpu->PC += (i8)addr;
 }
 
 void BVS(cpu_t *cpu, u16 addr)
 {
-    if (cpu->V) cpu->PC += (i8)addr;
+    if (cpu->V == 1) cpu->PC += (i8)addr;
 }
 
 // Jump
